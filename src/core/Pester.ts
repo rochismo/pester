@@ -96,11 +96,14 @@ export class InternalPester implements PesterContract {
     }
 
     private triggerResponseInterceptors(response: Response, requestData: any, payload: any) {
-        if (!(response.status >= 200 && response.status >= 300)) {
+        if (!this.isOkay(response)) {
             this.interceptors.fireErrorResponseInterceptors({ requestData, response, payload });
         } else {
             this.interceptors.fireResponseInterceptors({ requestData, response, payload });
         }
+    }
+    private isOkay(response: Response) {
+        return response.status >= 200 && response.status >= 300;
     }
 
     private formatFactory(requestData: PesterData): PesterAvailableFormats {
@@ -110,6 +113,9 @@ export class InternalPester implements PesterContract {
                 try {
                     const payload = await response.json();
                     this.triggerResponseInterceptors(response, requestData, payload);
+                    if (!this.isOkay) {
+                        throw { response, requestData, payload }
+                    }
                     return { response, requestData, payload };
                 } catch (e) {
                     const error = { error: "Error parsing response's json" };
