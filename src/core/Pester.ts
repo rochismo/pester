@@ -26,7 +26,6 @@ export class InternalPester implements PesterContract {
                 ...config
             };
         }
-        console.log(this.config)
         this.requester = requester;
         this.parseConfig(config);
         this.setupMethods();
