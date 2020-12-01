@@ -8,13 +8,13 @@ export interface ResponseInterceptorData {
     response: Response,
     requestData: PesterData;
     payload: any;
+    hadError: boolean;
 }
 
 
 export interface PesterConfig {
     sendsJson?: boolean;
     baseUrl?: string;
-    getsJson?: boolean;
     treatEverythingAsJson?: boolean;
 }
 

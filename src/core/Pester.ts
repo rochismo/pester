@@ -15,15 +15,18 @@ export class InternalPester implements PesterContract {
         treatEverythingAsJson: true,
         baseUrl: "/",
         sendsJson: true,
-        getsJson: true,
     };
 
     private requester: any;
 
     constructor(requester: any, config?: PesterConfig) {
         if (config) {
-            this.config = config;
+            this.config = {
+                ...this.config,
+                ...config
+            };
         }
+        console.log(this.config)
         this.requester = requester;
         this.parseConfig(config);
         this.setupMethods();
@@ -97,7 +100,7 @@ export class InternalPester implements PesterContract {
 
 
     private isOkay(response: Response) {
-        return response.ok && response.status >= 100 && response.status >= 300;
+        return response.ok;
     }
 
     private formatFactory(requestData: PesterData): PesterAvailableFormats {
@@ -106,29 +109,30 @@ export class InternalPester implements PesterContract {
                 const response = await this.request(requestData);
                 try {
                     const payload = await response.json();
+                    const data = { response, requestData, payload, hadError: false }
                     if (!this.isOkay(response)) {
-                        throw { response, requestData, payload }
+                        data.hadError = true;
+                        this.interceptors.fireErrorResponseInterceptors(data);
+                        return data;
                     }
-                    this.interceptors.fireResponseInterceptors({ requestData, response, payload });
-                    return { response, requestData, payload };
+                    this.interceptors.fireResponseInterceptors(data);
+                    return data;
                 } catch (e) {
-                    this.interceptors.fireErrorResponseInterceptors({ requestData, response, payload: e });
-                    throw { requestData, response, payload: e }
+                    this.interceptors.fireErrorResponseInterceptors({ requestData, response, payload: e, hadError: true });
+                    return { requestData, response, payload: e, error: "Failed to parse json" }
                 }
             },
             text: async () => {
                 const response = await this.request(requestData);
-                try {
-                    const text = await response.text();
-                    if (!this.isOkay(response)) {
-                        throw { response, requestData, payload: text }
-                    }
-                    this.interceptors.fireResponseInterceptors({ requestData, response, payload: text });
-                    return { response, requestData, payload: await response.text() }
-                } catch (e) {
-                    this.interceptors.fireErrorResponseInterceptors({ requestData, response, payload: e });
-                    throw { requestData, response, payload: e }
+                const text = await response.text();
+                const data = { requestData, response, payload: text, hadError: false };
+                if (!this.isOkay(response)) {
+                    data.hadError = true;
+                    this.interceptors.fireErrorResponseInterceptors(data);
+                    return data
                 }
+                this.interceptors.fireResponseInterceptors(data);
+                return data;
             }
         }
     }
