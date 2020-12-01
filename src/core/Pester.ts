@@ -113,14 +113,13 @@ export class InternalPester implements PesterContract {
                 try {
                     const payload = await response.json();
                     this.triggerResponseInterceptors(response, requestData, payload);
-                    if (!this.isOkay) {
+                    if (!this.isOkay(response)) {
                         throw { response, requestData, payload }
                     }
                     return { response, requestData, payload };
                 } catch (e) {
-                    const error = { error: "Error parsing response's json" };
-                    this.triggerResponseInterceptors(response, requestData, error);
-                    throw { response, requestData, error, secondaryError: e }
+                    this.triggerResponseInterceptors(response, requestData, e);
+                    throw { response, requestData, error: e, secondaryError: "Probably had an error parsing the json" }
                 }
             },
             text: async () => {
