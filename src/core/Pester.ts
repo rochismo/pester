@@ -56,9 +56,13 @@ export class InternalPester implements PesterContract {
 
         const url = buildUrl(this.baseUrl, data.uri);
         const requestInit: RequestInit = this.buildRequestInit(data);
-        const response: Response = await this.requester(url, requestInit);
+        try {
+            const response: Response = await this.requester(url, requestInit);
 
-        return response;
+            return response;
+        } catch(e) {
+            return {hadError: true, error: e};
+        }
     }
 
 
@@ -105,7 +109,10 @@ export class InternalPester implements PesterContract {
     private formatFactory(requestData: PesterData): PesterAvailableFormats {
         return {
             json: async () => {
-                const response = await this.request(requestData);
+                const response: any = await this.request(requestData);
+                if (response.hadError) {
+                    return { data: response }
+                }
                 try {
                     const payload = await response.json();
                     const data = { response, requestData, payload, hadError: false }
@@ -122,7 +129,10 @@ export class InternalPester implements PesterContract {
                 }
             },
             text: async () => {
-                const response = await this.request(requestData);
+                const response: any = await this.request(requestData);
+                if (response.hadError) {
+                    return { data: response }
+                }
                 const text = await response.text();
                 const data = { requestData, response, payload: text, hadError: false };
                 if (!this.isOkay(response)) {
