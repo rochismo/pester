@@ -1,6 +1,6 @@
 {
   "name": "@rochismo/pester",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "A simple http library for web client",
   "main": "index.js",
   "scripts": {
