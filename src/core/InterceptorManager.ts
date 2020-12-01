@@ -19,7 +19,7 @@ class ResponseInterceptorManager implements Manager {
             try {
                 success(data)
             } catch (e) {
-                throw new Error(`Error inside Request Interceptor (Success type): Interceptor ID ${id}`)
+                throw { message: `Error inside Request Interceptor (Success type): Interceptor ID ${id}`, error: e, data}
             }
         });
     }
@@ -28,7 +28,7 @@ class ResponseInterceptorManager implements Manager {
             try {
                 error(data)
             } catch (e) {
-                throw new Error(`Error inside Request Interceptor (Error type): Interceptor ID ${id}`)
+                throw { message: `Error inside Request Interceptor (Error type): Interceptor ID ${id}`, error: e, data}
             }
         });
     }
@@ -47,7 +47,7 @@ class RequestInterceptorManager implements Manager {
             try {
                 interceptor.callback(data);
             } catch (e) {
-                throw `Request Interceptor Error: Interceptor ID = ${interceptor.id}`
+                throw { message: `Request Interceptor Error: Interceptor ID = ${interceptor.id}`, error: e, data }
             }
         });
     }

@@ -10,7 +10,7 @@ export class InternalPester implements PesterContract {
     private baseUrl: string = "/";
     private baseHeaders: PesterHeaders = {};
     private requestData: PesterData = {};
-    
+
     private config: PesterConfig = {
         treatEverythingAsJson: true,
         baseUrl: "/",
@@ -96,7 +96,7 @@ export class InternalPester implements PesterContract {
     }
 
     private triggerResponseInterceptors(response: Response, requestData: any, payload: any) {
-        if (!response.ok) {
+        if (!(response.status >= 200 && response.status >= 300)) {
             this.interceptors.fireErrorResponseInterceptors({ requestData, response, payload });
         } else {
             this.interceptors.fireResponseInterceptors({ requestData, response, payload });
@@ -114,14 +114,18 @@ export class InternalPester implements PesterContract {
                 } catch (e) {
                     const error = { error: "Error parsing response's json" };
                     this.triggerResponseInterceptors(response, requestData, error);
-                    return { response, requestData, error }
+                    throw { response, requestData, error, secondaryError: e }
                 }
             },
             text: async () => {
-                const response = await this.request(requestData);
-                const text = await response.text();
-                this.triggerResponseInterceptors(response, requestData, text);
-                return { response, payload: await response.text() }
+                try {
+                    const response = await this.request(requestData);
+                    const text = await response.text();
+                    this.triggerResponseInterceptors(response, requestData, text);
+                    return { response, requestData, payload: await response.text() }
+                } catch (e) {
+                    throw e;
+                }
             }
         }
     }
