@@ -103,7 +103,7 @@ export class InternalPester implements PesterContract {
         }
     }
     private isOkay(response: Response) {
-        return response.status >= 200 && response.status >= 300;
+        return response.ok && response.status >= 100 && response.status >= 300;
     }
 
     private formatFactory(requestData: PesterData): PesterAvailableFormats {
