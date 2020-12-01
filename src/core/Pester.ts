@@ -95,13 +95,7 @@ export class InternalPester implements PesterContract {
             });
     }
 
-    private triggerResponseInterceptors(response: Response, requestData: any, payload: any) {
-        if (!this.isOkay(response)) {
-            this.interceptors.fireErrorResponseInterceptors({ requestData, response, payload });
-        } else {
-            this.interceptors.fireResponseInterceptors({ requestData, response, payload });
-        }
-    }
+
     private isOkay(response: Response) {
         return response.ok && response.status >= 100 && response.status >= 300;
     }
@@ -112,24 +106,28 @@ export class InternalPester implements PesterContract {
                 const response = await this.request(requestData);
                 try {
                     const payload = await response.json();
-                    this.triggerResponseInterceptors(response, requestData, payload);
                     if (!this.isOkay(response)) {
                         throw { response, requestData, payload }
                     }
+                    this.interceptors.fireResponseInterceptors({ requestData, response, payload });
                     return { response, requestData, payload };
                 } catch (e) {
-                    this.triggerResponseInterceptors(response, requestData, e);
-                    throw { response, requestData, error: e, secondaryError: "Probably had an error parsing the json" }
+                    this.interceptors.fireErrorResponseInterceptors({ requestData, response, payload: e });
+                    throw { requestData, response, payload: e }
                 }
             },
             text: async () => {
+                const response = await this.request(requestData);
                 try {
-                    const response = await this.request(requestData);
                     const text = await response.text();
-                    this.triggerResponseInterceptors(response, requestData, text);
+                    if (!this.isOkay(response)) {
+                        throw { response, requestData, payload: text }
+                    }
+                    this.interceptors.fireResponseInterceptors({ requestData, response, payload: text });
                     return { response, requestData, payload: await response.text() }
                 } catch (e) {
-                    throw e;
+                    this.interceptors.fireErrorResponseInterceptors({ requestData, response, payload: e });
+                    throw { requestData, response, payload: e }
                 }
             }
         }
