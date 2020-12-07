@@ -91,3 +91,6 @@ what interceptor caused the error, by displaying the interceptor type and the  i
 
 ### Unhandled errors
 As any other unhandled errors, you will have to handle them by yourself
+
+## TODO's
+[] When a network error occurrs, return a generic error object instead of an object like "{ data }"
