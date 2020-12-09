@@ -5,7 +5,7 @@ export interface Manager {
 }
 
 export interface ResponseInterceptorData {
-    response: Response,
+    response?: Response,
     requestData: PesterData;
     payload: any;
     hadError: boolean;

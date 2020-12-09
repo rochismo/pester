@@ -1,5 +1,5 @@
 /* tslint:disable */
-import { PesterConfig, PesterHeaders, PesterData, PesterContract, PesterAvailableFormats } from './../types';
+import { PesterConfig, PesterHeaders, PesterData, PesterContract, PesterAvailableFormats, ResponseInterceptorData } from './../types';
 import { BodyMethods, BodylessMethods } from './Methods'
 import { buildUrl } from './util/UrlBuilder';
 import InterceptorManager from './InterceptorManager';
@@ -51,7 +51,7 @@ export class InternalPester implements PesterContract {
     }
 
 
-    public async request(data: PesterData) {
+    public async request(data: PesterData): Promise<ResponseInterceptorData> {
         this.interceptors.fireRequestInterceptors(data);
 
         const url = buildUrl(this.baseUrl, data.uri);
@@ -59,9 +59,9 @@ export class InternalPester implements PesterContract {
         try {
             const response: Response = await this.requester(url, requestInit);
 
-            return response;
-        } catch(e) {
-            return {hadError: true, error: e};
+            return { response, payload: response, hadError: false, requestData: data };
+        } catch (e) {
+            return { hadError: true, payload: { message: "You are offline" }, requestData: data };
         }
     }
 
@@ -101,7 +101,6 @@ export class InternalPester implements PesterContract {
             });
     }
 
-
     private isOkay(response: Response) {
         return response.ok;
     }
@@ -109,29 +108,31 @@ export class InternalPester implements PesterContract {
     private formatFactory(requestData: PesterData): PesterAvailableFormats {
         return {
             json: async () => {
-                const response: any = await this.request(requestData);
-                if (response.hadError) {
-                    return { data: response }
+                const data: ResponseInterceptorData = await this.request(requestData);
+                if (data.hadError) {
+                    return data;
                 }
                 try {
-                    const payload = await response.json();
-                    const data = { response, requestData, payload, hadError: false }
-                    if (!this.isOkay(response)) {
+                    const payload = await data.response.json();
+                    data.payload = payload;
+                    if (!this.isOkay(data.response)) {
                         data.hadError = true;
                         this.interceptors.fireErrorResponseInterceptors(data);
                         return data;
                     }
+                    data.payload = payload;
                     this.interceptors.fireResponseInterceptors(data);
-                    return data;
                 } catch (e) {
-                    this.interceptors.fireErrorResponseInterceptors({ requestData, response, payload: e, hadError: true });
-                    return { requestData, response, payload: e, error: "Failed to parse json" }
+                    data.hadError = true;
+                    data.payload = { message: "Failed to parse json" };
+                    this.interceptors.fireErrorResponseInterceptors(data);
                 }
+                return data;
             },
             text: async () => {
                 const response: any = await this.request(requestData);
                 if (response.hadError) {
-                    return { data: response }
+                    return { payload: response, hadError: true }
                 }
                 const text = await response.text();
                 const data = { requestData, response, payload: text, hadError: false };
@@ -146,20 +147,40 @@ export class InternalPester implements PesterContract {
         }
     }
 
-    get(uri: string): PesterAvailableFormats {
-        throw new Error('Method not implemented.');
+    get(uri: string): PesterAvailableFormats | any {
+        const types = this.formatFactory({ method: "GET", headers: this.baseHeaders, uri });
+        if (this.config.treatEverythingAsJson) {
+            return types.json();
+        }
+        return types;
     }
-    delete(uri: string): PesterAvailableFormats {
-        throw new Error('Method not implemented.');
+    delete(uri: string): PesterAvailableFormats | any {
+        const types = this.formatFactory({ method: "DELETE", headers: this.baseHeaders, uri });
+        if (this.config.treatEverythingAsJson) {
+            return types.json();
+        }
+        return types;
     }
-    post(uri: any, data: any): PesterAvailableFormats {
-        throw new Error('Method not implemented.');
+    post(uri: any, data: any): PesterAvailableFormats | any {
+        const types = this.formatFactory({ method: "POST", headers: this.baseHeaders, uri, requestData: data });
+        if (this.config.treatEverythingAsJson) {
+            return types.json();
+        }
+        return types;
     }
-    put(uri: string, data: any): PesterAvailableFormats {
-        throw new Error('Method not implemented.');
+    put(uri: string, data: any): PesterAvailableFormats | any {
+        const types = this.formatFactory({ method: "PUT", headers: this.baseHeaders, uri, requestData: data });
+        if (this.config.treatEverythingAsJson) {
+            return types.json();
+        }
+        return types;
     }
-    patch(uri: string, data: any): PesterAvailableFormats {
-        throw new Error('Method not implemented.');
+    patch(uri: string, data: any): PesterAvailableFormats | any {
+        const types = this.formatFactory({ method: "PATCH", headers: this.baseHeaders, uri, requestData: data });
+        if (this.config.treatEverythingAsJson) {
+            return types.json();
+        }
+        return types;
     }
 }
 
